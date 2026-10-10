@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description"
+    content="Ejemplo educativo de pronóstico de ventas y reposición diaria con datos sintéticos." />
+  <title>Inventario a tiempo · Laboratorio de pronóstico</title>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2325414b'/%3E%3Cpath d='M9 29V19m11 10V11m11 18V15' stroke='%23f3bd72' stroke-width='5'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="/static/app.js" defer></script>
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Saltar al contenido</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M4 19V5m0 14h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="m7 15 4-4 3 2 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" />
+            <circle cx="19" cy="7" r="1.5" fill="currentColor" />
+          </svg>
+        </div>
+
+        <div>
+          <p class="brand-name">Sistema Centralizado de gestión comercial e inventarios</p>
+          <p class="brand-description">
+            Inteligencia Artificial para la reposición inteligente de repuestos
+          </p>
+        </div>
+      </div>
+
+      <span class="badge" id="connection-status" role="status">
+        Verificando conexión
+      </span>
+    </div>
+  </header>
+
+  <main class="page-shell" id="main">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">PREPARAR EL SIGUIENTE DÍA</p>
+        <h1>Compra con una<br />mejor referencia.</h1>
+        <p class="hero-copy">
+          Estima las ventas de un producto y explora una propuesta de
+          reposición a partir de su historial.
+        </p>
+      </div>
+      <div class="journey" aria-label="Historial, pronóstico y reposición">
+        <div>
+          <span class="journey-number">01</span><strong>Mirar el historial</strong>
+          <small>14 días ya observados</small>
+        </div>
+        <div>
+          <span class="journey-number">02</span><strong>Estimar las ventas</strong>
+          <small>Un día por delante</small>
+        </div>
+        <div>
+          <span class="journey-number">03</span><strong>Planificar el stock</strong>
+          <small>Una regla
+            transparente</small>
+        </div>
+      </div>
+    </section>
+
+    <nav class="section-nav" aria-label="Secciones del laboratorio">
+      <button type="button" data-panel="simulator" aria-pressed="true">
+        01 <span>Simulador</span>
+      </button>
+      <button type="button" data-panel="results" aria-pressed="false">
+        02 <span>Resultados</span>
+      </button>
+      <button type="button" data-panel="method" aria-pressed="false">
+        03 <span>Datos y método</span>
+      </button>
+    </nav>
+    <p id="global-error" class="notice error" role="alert" hidden></p>
+
+    <section id="simulator" class="panel">
+      <div class="workspace-grid">
+        <section class="card" aria-labelledby="form-title">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">CIERRE DE CAJA → PLAN DEL DÍA SIGUIENTE</p>
+              <h2 id="form-title">Planifica una reposición</h2>
+            </div>
+            <span class="step-mark">01</span>
+          </div>
+          <p class="muted">
+            El historial se carga automáticamente. Una unidad equivale a un
+            paquete vendible del producto seleccionado.
+          </p>
+
+          <form id="forecast-form">
+            <div class="form-grid">
+              <div class="field">
+                <label for="branch_id">Sucursal</label>
+                <select id="branch_id" name="branch_id" required>
+                  <option value="">Cargando catálogo…</option>
+                </select>
+                <small>Cinco Sucursales de una tienda ficticia.</small>
+              </div>
+
+              <div class="field">
+                <label for="product_id">Producto</label><select id="product_id" name="product_id" required>
+                  <option value="">Cargando catálogo…</option>
+                </select><small>Siete productos de una tienda ficticia.</small>
+              </div>
+              <div class="field">
+                <label for="forecast_date">Día que deseas pronosticar</label>
+                <input id="forecast_date" name="forecast_date" type="date" required />
+                <small>Fecha del calendario de simulación de 2025.</small>
+              </div>
+
+              <div class="field">
+                <label for="stock_on_hand">Stock al cierre <span>unidades</span></label><input id="stock_on_hand"
+                  name="stock_on_hand" type="number" min="0" max="100000" step="1" value="15"
+                  required /><small>Existencias disponibles y en buen estado.</small>
+              </div>
+              <div class="field">
+                <label for="incoming_units">Entradas ya confirmadas <span>unidades</span></label><input
+                  id="incoming_units" name="incoming_units" type="number" min="0" max="100000" step="1" value="0"
+                  required /><small>Pedidos que llegarán antes de abrir.</small>
+              </div>
+              <div class="field">
+                <label for="safety_units">Reserva adicional <span>unidades</span></label><input id="safety_units"
+                  name="safety_units" type="number" min="0" max="1000" step="1" value="5" required /><small>Margen
+                  manual; no es una garantía de cobertura.</small>
+              </div>
+            </div>
+            <p id="form-error" class="notice error" role="alert" hidden></p>
+            <button type="submit" class="primary-button" id="forecast-button" disabled>
+              Calcular pronóstico <span aria-hidden="true">↗</span>
+            </button>
+            <p class="form-note">
+              No se registra ninguna compra ni se modifica el inventario.
+            </p>
+          </form>
+        </section>
+
+        <aside class="result-column">
+          <section class="card forecast-card" aria-labelledby="forecast-title">
+            <p class="eyebrow">DE LA ESTIMACIÓN A LA DECISIÓN</p>
+            <h2 id="forecast-title">Tu plan para el siguiente día</h2>
+            <div id="empty-result" class="empty-state">
+              <div class="empty-symbol" aria-hidden="true">▥</div>
+              <h3>Explora un escenario</h3>
+              <p>
+                Elige un producto y calcula el pronóstico para comparar ventas
+                previstas, stock y reposición.
+              </p>
+            </div>
+            <div id="forecast-result" aria-live="polite" hidden>
+              <p id="result-caption" class="muted"></p>
+              <span class="figure-label">Ventas estimadas</span>
+              <div class="forecast-figure">
+                <strong id="forecast-units">—</strong><span>unidades</span>
+              </div>
+              <div class="baseline-line">
+                <span>Referencia: mismo día de la semana anterior</span><strong id="baseline-units"></strong>
+              </div>
+              <div class="order-box">
+                <div>
+                  <span>Reposición sugerida</span>
+                  <strong id="order-units"></strong>
+                </div>
+                <p id="order-description"></p>
+              </div>
+              <dl class="calculation">
+                <div>
+                  <dt>
+                    Objetivo: pronóstico + reserva, redondeado hacia arriba
+                  </dt>
+                  <dd id="target-stock"></dd>
+                </div>
+                <div>
+                  <dt>Stock + entradas confirmadas</dt>
+                  <dd id="available-stock"></dd>
+                </div>
+              </dl>
+              <p class="small-note">
+                La propuesta supone que la nueva reposición también llega
+                antes de abrir. Para entregas de varios días hace falta otro
+                horizonte de pronóstico.
+              </p>
+            </div>
+          </section>
+          <div class="context-note">
+            <span class="note-icon" aria-hidden="true">i</span>
+            <div>
+              <h3>Dos cálculos distintos</h3>
+              <p>
+                El modelo estima ventas. Una regla aparte resta el stock
+                disponible para proponer la compra.
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <section class="card history-card" aria-labelledby="history-title">
+        <div class="chart-heading">
+          <div>
+            <p class="eyebrow">CONTEXTUALIZA EL PRONÓSTICO</p>
+            <h3 id="history-title">Últimos 14 días y siguiente estimación</h3>
+          </div>
+          <div class="chart-legend">
+            <span><i class="history-key"></i>Ventas observadas</span><span><i class="forecast-key"></i>Pronóstico</span>
+          </div>
+        </div>
+        <p id="chart-placeholder" class="muted">
+          El historial aparecerá después de calcular un escenario.
+        </p>
+        <div id="history-content" hidden>
+          <svg id="history-chart" viewBox="0 0 840 220" role="img" aria-label="Historial de ventas y pronóstico"></svg>
+          <details>
+            <summary>Ver valores del gráfico y variables utilizadas</summary>
+            <div class="history-details">
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th scope="col">Fecha</th>
+                      <th scope="col">Unidades</th>
+                      <th scope="col">Tipo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="history-body"></tbody>
+                </table>
+              </div>
+              <div id="feature-summary" class="feature-summary"></div>
+            </div>
+          </details>
+        </div>
+      </section>
+    </section>
+
+    <section id="results" class="panel" hidden>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">EVALUACIÓN EN FECHAS POSTERIORES</p>
+          <h2>¿Cuánto se equivoca el modelo?</h2>
+        </div>
+        <p class="muted">
+          Prueba final con pronósticos diarios de enero a junio de 2025. Las
+          cifras provienen del entrenamiento guardado.
+        </p>
+      </div>
+      <div class="metric-grid">
+        <article class="card metric">
+          <span>Error medio · MAE</span>
+          <strong id="metric-mae">—</strong>
+          <p>
+            Unidades de error por producto y día, en promedio. Menor es mejor.
+          </p>
+        </article>
+        <article class="card metric">
+          <span>MAE de la referencia semanal</span>
+          <strong id="metric-baseline">—</strong>
+          <p>
+            Error al repetir las ventas del mismo día de la semana anterior.
+          </p>
+        </article>
+        <article class="card metric">
+          <span id="improvement-label">Reducción del error</span>
+          <strong id="metric-improvement">—</strong>
+          <p>
+            Comparación de ambos métodos sobre exactamente las mismas fechas.
+          </p>
+        </article>
+      </div>
+      <div class="workspace-grid results-grid">
+        <section class="card">
+          <h3>Comparación completa</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Métrica</th>
+                  <th scope="col">Referencia</th>
+                  <th scope="col">Modelo</th>
+                </tr>
+              </thead>
+              <tbody id="metrics-body"></tbody>
+            </table>
+          </div>
+          <p class="small-note">
+            El sesgo representa la diferencia entre lo predicho y lo real (un
+            valor positivo indica sobreestimación y uno negativo
+            subestimación). Por su parte, el WAPE pondera el error frente al
+            volumen total de ventas, por lo que su desempeño puede variar en
+            productos de menor rotación.
+          </p>
+        </section>
+        <section class="card">
+          <h3>El error de cada producto</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Producto</th>
+                  <th scope="col">MAE referencia</th>
+                  <th scope="col">MAE modelo</th>
+                </tr>
+              </thead>
+              <tbody id="product-body"></tbody>
+            </table>
+          </div>
+          <p class="small-note">
+            Una mejora del promedio no implica mejorar todos los productos.
+            Revisa cada fila.
+          </p>
+          <br />
+
+          <h3>El error de cada sucursal</h3>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Sucursal</th>
+                  <th scope="col">MAE referencia</th>
+                  <th scope="col">MAE modelo</th>
+                </tr>
+              </thead>
+              <tbody id="branch-body"></tbody>
+            </table>
+          </div>
+          <p class="small-note">
+            El MAE mide el error absoluto medio de las predicciones. Un valor
+            menor indica mayor precisión; compara la referencia con el modelo
+            en cada sucursal.
+          </p>
+        </section>
+      </div>
+      <p class="notice">
+        El MAE refleja el error promedio del pronóstico, pero no garantiza la
+        precisión de cada predicción. Un mejor desempeño predictivo no implica
+        por sí solo ahorro, menos faltantes o menor desperdicio.
+      </p>
+    </section>
+
+    <section id="method" class="panel" hidden>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">UN EXPERIMENTO QUE PUEDES REPETIR</p>
+          <h2>Datos, referencia y modelo</h2>
+        </div>
+        <p class="muted">
+          Una fila representa un producto en un día. El historial anterior se
+          utiliza para pronosticar el siguiente.
+        </p>
+      </div>
+      <section class="card">
+        <h3>Cada período tiene una función</h3>
+        <div id="split-timeline" class="split-grid"></div>
+        <p class="small-note">
+          Evaluación sucesiva de un día: para cada fecha se conocen las ventas
+          de fechas anteriores, incluso si pertenecen a la prueba. No se
+          pronostican seis meses de una sola vez.
+        </p>
+      </section>
+      <div class="method-grid">
+        <article class="card">
+          <span class="step-mark">01</span>
+          <h3>Historial sintético</h3>
+          <p id="dataset-summary" class="small-note"></p>
+        </article>
+        <article class="card">
+          <span class="step-mark">02</span>
+          <h3>Referencia semanal</h3>
+          <p>
+            Se espera vender lo mismo que siete días atrás. Esta regla
+            sencilla es el punto de comparación.
+          </p>
+        </article>
+        <article class="card">
+          <span class="step-mark">03</span>
+          <h3>Árboles de regresión</h3>
+          <p>
+            El modelo combina producto, calendario, promoción, ventas
+            anteriores y promedios.
+          </p>
+        </article>
+        <article class="card">
+          <span class="step-mark">04</span>
+          <h3>Selección y prueba</h3>
+          <p id="selection-summary">
+            Se elige la configuración con menor MAE de validación y se
+            conserva para la prueba final.
+          </p>
+        </article>
+      </div>
+    </section>
+    <noscript>
+      <p class="notice error">
+        Activa JavaScript para utilizar el simulador. La documentación de la
+        API está disponible en /docs.
+      </p>
+    </noscript>
+  </main>
+  <footer>
+    <span>Ejemplo educativo 02 · Pronóstico de ventas y reposición</span><a href="/docs" target="_blank"
+      rel="noopener">Explorar API ↗</a>
+  </footer>
+</body>
+
+</html>
